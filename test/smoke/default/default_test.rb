@@ -2,16 +2,26 @@
 
 # Inspec test for recipe my_php::default
 
+case os[:family]
+when 'redhat'
+  package = 'php-fpm'
+when 'debian'
+  package = 'php7.0-fpm'
+end
+
 describe package('nginx') do
   it { should be_installed }
 end
 
-describe package('php7.0-fpm') do
+describe package(package) do
   it { should be_installed }
 end
 
-describe file('/etc/nginx/sites-enabled/default') do
-  it { should_not exist }
+remove = %w(sites/000-default conf.d/default.conf)
+remove.each do |rm|
+  describe file(rm) do
+    it { should_not exist }
+  end
 end
 
 describe file('/etc/nginx/sites-available/my_php') do

@@ -9,47 +9,34 @@ require 'spec_helper'
 describe 'my_php::default' do
   context 'When all attributes are default, on an Ubuntu 16.04' do
     let(:chef_run) do
-      runner = ChefSpec::ServerRunner.new(platform: 'ubuntu', version: '16.04') do |node, server|
+      ChefSpec::ServerRunner.new(platform: 'ubuntu', version: '16.04') do |node|
         node.override['nginx']['default_root'] = '/srv/www/my_php'
-      end
-      runner.converge(described_recipe)
+      end.converge(described_recipe)
     end
 
     before(:each) do
-      stub_command("test -d /etc/php/7.0/fpm/pool.d || mkdir -p /etc/php/7.0/fpm/pool.d").and_return(false)
+      pool_d = '/etc/php/7.0/fpm/pool.d'
+      stub_command("test -d #{pool_d} || mkdir -p #{pool_d}").and_return(false)
     end
 
     it 'converges successfully' do
       expect { chef_run }.to_not raise_error
     end
 
-    it 'includes chef_nginx cookbook' do
-      expect(chef_run).to include_recipe('chef_nginx::default')
-    end
-    
-    it 'includes php-fpm cookbook' do
-      expect(chef_run).to include_recipe('php-fpm::default')
+    it 'includes chef_nginx php-fpm cookbooks' do
+      cookbks = %w(chef_nginx::default php-fpm::default)
+      cookbks.each { |inc| expect(chef_run).to include_recipe(inc) }
     end
 
     it 'removes default nginx file' do
-      expect(chef_run).to delete_file('/etc/nginx/sites-enabled/000-default')
+      remove = %w(sites/000-default conf.d/default.conf)
+      remove.each { |rm| expect(chef_run).to delete_file(rm) }
     end
 
-    it 'renders nginx config' do
-      expect(chef_run).to render_file('/etc/nginx/sites-available/my_php')
-    end
-
-    it 'creates symlink to sites-enabled' do
-      resource = chef_run.link('/etc/nginx/sites-enabled/my_php')
-      expect(resource).to link_to('/etc/nginx/sites-available/my_php')
-    end
-
-    it 'creates nginx root directory' do
-      expect(chef_run).to create_directory(chef_run.node['nginx']['default_root'])
-    end
-
-    it 'creates file test.php' do
-      expect(chef_run).to create_file("#{chef_run.node['nginx']['default_root']}/test.php")
+    it 'creates file test.php and their directory' do
+      nginx_root = chef_run.node['nginx']['default_root']
+      expect(chef_run).to create_directory(nginx_root)
+      expect(chef_run).to create_file("#{nginx_root}/test.php")
     end
   end
 end

@@ -4,22 +4,23 @@
 #
 # Copyright:: 2017, The Authors, All Rights Reserved.
 
+node.default['php-fpm']['listen'] = '/var/run/php-fpm-www.sock'
+node.default['php-fpm']['user'] = node['nginx']['user']
+
 include_recipe 'chef_nginx::default'
 include_recipe 'php-fpm::default'
 
-node.default['php-fpm']['listen'] = '/var/run/php-fpm-www.sock'
 
-file '/etc/nginx/sites-enabled/000-default' do
-  action :delete
+remove = %w(sites-enabled/000-default conf.d/default.conf)
+remove.each do |rm|
+  file "/etc/nginx/#{rm}" do
+    action :delete
+    notifies :reload, 'service[nginx]', :delayed
+  end
 end
 
-template '/etc/nginx/sites-available/my_php' do
-  source 'my_php.erb'
-  notifies :restart, 'service[nginx]', :delayed
-end
-
-link '/etc/nginx/sites-enabled/my_php' do
-  to '/etc/nginx/sites-available/my_php'
+nginx_site 'my_php' do
+  template 'my_php.erb'
 end
 
 directory node['nginx']['default_root'] do
