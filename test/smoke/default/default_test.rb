@@ -2,17 +2,30 @@
 
 # Inspec test for recipe my_php::default
 
-# The Inspec reference, with examples and extensive documentation, can be
-# found at http://inspec.io/docs/reference/resources/
-
-unless os.windows?
-  # This is an example test, replace with your own test.
-  describe user('root'), :skip do
-    it { should exist }
-  end
+describe package('nginx') do
+  it { should be_installed }
 end
 
-# This is an example test, replace it with your own test.
-describe port(80), :skip do
-  it { should_not be_listening }
+describe package('php7.0-fpm') do
+  it { should be_installed }
+end
+
+describe file('/etc/nginx/sites-enabled/default') do
+  it { should_not exist }
+end
+
+describe file('/etc/nginx/sites-available/my_php') do
+  it { should exist }
+end
+
+describe file('/etc/nginx/sites-enabled/my_php') do
+  it { should be_symlink }
+end
+
+describe port(80) do
+  it { should be_listening }
+end
+
+describe command('curl http://localhost/test.php') do
+  its('stdout') { should match (/phpinfo()/) }
 end
